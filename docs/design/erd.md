@@ -87,12 +87,12 @@ erDiagram
     RESERVATION_SEAT {
         bigint id PK
         bigint reservation_id FK
-        bigint game_seat_id FK UK
+        bigint game_seat_id FK, UK
     }
 
     PAYMENT {
         bigint id PK
-        bigint reservation_id FK UK
+        bigint reservation_id FK, UK
         int amount
         varchar method "MOCK"
         varchar status "PENDING, COMPLETED, FAILED, REFUNDED"
