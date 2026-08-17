@@ -1,0 +1,93 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '4.1.0'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.baseball'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+ext {
+	jjwtVersion = '0.12.6'
+	testcontainersVersion = '1.20.4'
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.testcontainers:testcontainers-bom:${testcontainersVersion}"
+	}
+}
+
+dependencies {
+	// Web / validation
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// Persistence
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	runtimeOnly 'org.postgresql:postgresql'
+
+	// Security / JWT
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation "io.jsonwebtoken:jjwt-api:${jjwtVersion}"
+	runtimeOnly "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"
+	runtimeOnly "io.jsonwebtoken:jjwt-jackson:${jjwtVersion}"
+
+	// Ops
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+	// Boilerplate reduction
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// Test
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+	testImplementation 'org.springframework.security:spring-security-test'
+	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+	testImplementation 'org.testcontainers:junit-jupiter'
+	testImplementation 'org.testcontainers:postgresql'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+	// Gradle sandboxes user.home for forked test JVMs by default, which hides
+	// ~/.testcontainers.properties (used to point Testcontainers at non-default
+	// Docker hosts, e.g. Colima). Forward the real user.home so it's found.
+	systemProperty 'user.home', System.getProperty('user.home')
+	// The forked test JVM's default environment is captured before Gradle's
+	// per-build env patching applies, so DOCKER_HOST (set for non-default Docker
+	// hosts, e.g. Colima) doesn't reach it unless forwarded explicitly here.
+	if (System.getenv('DOCKER_HOST') != null) {
+		environment 'DOCKER_HOST', System.getenv('DOCKER_HOST')
+	}
+	// Testcontainers 1.20.4's bundled docker-java defaults to a very old Docker
+	// API version (1.32), which recent Docker engines (e.g. Colima's) reject.
+	// Pin a modern version so client/server negotiation succeeds (docker-java
+	// reads this via the "api.version" system property, not an env var).
+	systemProperty 'api.version', '1.44'
+	// Colima runs the Docker daemon inside a Linux VM, so the macOS host socket
+	// path isn't a valid bind-mount source *inside* that VM. Testcontainers'
+	// Ryuk reaper container tries to bind-mount it anyway and fails to start.
+	// Disabling Ryuk is the standard workaround for Colima; containers we start
+	// (Postgres in these tests) are still torn down by JUnit's lifecycle in the
+	// normal case — this only gives up auto-cleanup after an abnormal JVM kill.
+	environment 'TESTCONTAINERS_RYUK_DISABLED', 'true'
+}
