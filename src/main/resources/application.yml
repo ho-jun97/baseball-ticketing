@@ -1,0 +1,25 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ticketing
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ticketing}
+    username: ${DB_USER:ticketing}
+    password: ${DB_PASSWORD:ticketing}
+  jpa:
+    hibernate:
+      # TODO: 스캐폴딩 단계 임시값. 엔티티 구현 시 Flyway/Liquibase 도입 여부를 재검토하고
+      # 도입하면 validate로, 아니면 최소한 none/스크립트 관리로 전환할 것.
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
